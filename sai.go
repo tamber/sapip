@@ -125,6 +125,18 @@ func (Q *SAIQueue) AddElement(Name, Data string) (sr SafeReturn) {
 	return
 }
 
+func (Q *SAIQueue) AddElements(Name string, Data []string) (sr SafeReturn) {
+	Q.waitCond.L.Lock()
+	defer Q.waitCond.L.Unlock()
+	Q.lock.Lock()
+	defer Q.lock.Unlock()
+	// Add the element
+	sr = Q.elements.AddElements(Name, Data)
+	// Broadcast that the queue might be non-empty
+	Q.waitCond.Broadcast()
+	return
+}
+
 // Update the limit on the number of simultaneously executing
 // elements. If there are more than limit currently executing,
 // the queue will wait until it is under the new limit.

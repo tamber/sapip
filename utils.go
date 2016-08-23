@@ -84,6 +84,24 @@ func (D *IndexedElements) AddElement(Name, Data string) SafeReturn {
 	return e.OutChannel
 }
 
+func (D *IndexedElements) AddElements(Name string, Data []string) SafeReturn {
+	if p, ok := D.NameIndex[Name]; ok {
+		p.Data = append(p.Data, Data...)
+		return p.OutChannel
+	}
+	e := &Element{Name, Data, make(SafeReturn, 1), nil, nil}
+	if D.End != nil {
+		D.End.Next = e
+		e.Prev = D.End
+	}
+	if D.Front == nil {
+		D.Front = e
+	}
+	D.End = e
+	D.NameIndex[e.Name] = e
+	return e.OutChannel
+}
+
 // Remove an element
 func (D *IndexedElements) RemoveElement(e *Element) {
 	if e.Prev != nil {
