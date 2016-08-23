@@ -94,8 +94,8 @@ func (Q *SAIQueue) getTopElement() *Element {
 		found := func() bool {
 			Q.execLock.Lock()
 			defer Q.execLock.Unlock()
-			Q.isExecuting(e)
-		}
+			return Q.isExecuting(e)
+		}()
 		if !found {
 			Q.lock.Lock()
 			defer Q.lock.Unlock()
