@@ -77,21 +77,25 @@ func (Q *SAIQueue) exec(e *Element) {
 	r = Q.function(e.Name, e.Data)
 }
 
+func (Q *SAIQueue) isExecuting(e *Element) bool {
+	found := false
+	for _, elem := range Q.execElements {
+		if elem.Name == e.Name && elem != e {
+			found = true
+			break
+		}
+	}
+	return found
+}
+
 func (Q *SAIQueue) getTopElement() *Element {
 	e := Q.elements.Front
 	for e != nil {
 		found := func() bool {
-			found := false
 			Q.execLock.Lock()
 			defer Q.execLock.Unlock()
-			for _, elem := range Q.execElements {
-				if elem.Name == e.Name && elem != e {
-					found = true
-					break
-				}
-			}
-			return found
-		}()
+			Q.isExecuting(e)
+		}
 		if !found {
 			Q.lock.Lock()
 			defer Q.lock.Unlock()
@@ -185,9 +189,11 @@ func (Q *SAIQueue) Run() {
 			break
 		}
 		Q.execLock.Lock()
-		Q.execElements = append(Q.execElements, e)
+		if !Q.isExecuting(e) {
+			Q.execElements = append(Q.execElements, e)
+			go Q.exec(e)
+		}
 		Q.execLock.Unlock()
 		Q.waitCond.L.Unlock()
-		go Q.exec(e)
 	}
 }
