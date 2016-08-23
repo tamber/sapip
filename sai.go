@@ -18,6 +18,7 @@
 package sapip
 
 import (
+	"bytes"
 	"sync"
 )
 
@@ -80,7 +81,7 @@ func (Q *SAIQueue) exec(e *Element) {
 func (Q *SAIQueue) isExecuting(e *Element) bool {
 	found := false
 	for _, elem := range Q.execElements {
-		if elem.Name == e.Name && elem != e {
+		if bytes.Equal(elem.Name, e.Name) && elem != e {
 			found = true
 			break
 		}
@@ -113,7 +114,7 @@ func (Q *SAIQueue) getTopElement() *Element {
 
 // Insert an element into the queue. If an element of that name already
 // exists, the data will be appended into a list.
-func (Q *SAIQueue) AddElement(Name, Data string) (sr SafeReturn) {
+func (Q *SAIQueue) AddElement(Name []byte, Data string) (sr SafeReturn) {
 	Q.waitCond.L.Lock()
 	defer Q.waitCond.L.Unlock()
 	Q.lock.Lock()
@@ -125,7 +126,7 @@ func (Q *SAIQueue) AddElement(Name, Data string) (sr SafeReturn) {
 	return
 }
 
-func (Q *SAIQueue) AddElements(Name string, Data []string) (sr SafeReturn) {
+func (Q *SAIQueue) AddElements(Name []byte, Data []string) (sr SafeReturn) {
 	Q.waitCond.L.Lock()
 	defer Q.waitCond.L.Unlock()
 	Q.lock.Lock()

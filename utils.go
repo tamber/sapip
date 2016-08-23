@@ -27,7 +27,7 @@ func (SR SafeReturn) Return(value string) { SR <- value }
 func (SR SafeReturn) Read() string        { value := <-SR; SR <- value; return value }
 
 type Element struct {
-	Name       string
+	Name       []byte
 	Data       []string
 	OutChannel SafeReturn
 	Next       *Element
@@ -35,7 +35,7 @@ type Element struct {
 }
 
 type PriorityElement struct {
-	Name       string
+	Name       []byte
 	Data       []string
 	Priority   int
 	OutChannel SafeReturn
@@ -43,11 +43,11 @@ type PriorityElement struct {
 	Prev       *PriorityElement
 }
 
-type QueueFunction func(name string, data []string) string
-type QueueErrFunction func(name string, err interface{})
+type QueueFunction func(name []byte, data []string) string
+type QueueErrFunction func(name []byte, err interface{})
 
-func defaultErrFunc(name string, err interface{}) {
-	log.Println("Error in queue on element:", name, "-", err)
+func defaultErrFunc(name []byte, err interface{}) {
+	log.Println("Error in queue on element:", string(name), "-", err)
 }
 
 // Map Queue to SAPIPQueue
@@ -56,7 +56,7 @@ type Queue SAPIPQueue
 var NewQueue = NewSAPIPQueue
 
 type IndexedElements struct {
-	NameIndex map[string]*Element // Map from each name to pointer to corresponding element
+	NameIndex map[string]*Element // Map from each name to pointer to corresponding element.
 	Front     *Element            // Front element
 	End       *Element            // Last element
 }
@@ -66,8 +66,8 @@ func MakeIndexedElements() IndexedElements {
 }
 
 // Insert an element
-func (D *IndexedElements) AddElement(Name, Data string) SafeReturn {
-	if p, ok := D.NameIndex[Name]; ok {
+func (D *IndexedElements) AddElement(Name []byte, Data string) SafeReturn {
+	if p, ok := D.NameIndex[string(Name)]; ok { // string([]byte) does not result in alloc due to: https://github.com/golang/go/commit/f5f5a8b6209f84961687d993b93ea0d397f5d5bf
 		p.Data = append(p.Data, Data)
 		return p.OutChannel
 	}
@@ -80,12 +80,12 @@ func (D *IndexedElements) AddElement(Name, Data string) SafeReturn {
 		D.Front = e
 	}
 	D.End = e
-	D.NameIndex[e.Name] = e
+	D.NameIndex[string(e.Name)] = e
 	return e.OutChannel
 }
 
-func (D *IndexedElements) AddElements(Name string, Data []string) SafeReturn {
-	if p, ok := D.NameIndex[Name]; ok {
+func (D *IndexedElements) AddElements(Name []byte, Data []string) SafeReturn {
+	if p, ok := D.NameIndex[string(Name)]; ok { // string([]byte) does not result in alloc due to: https://github.com/golang/go/commit/f5f5a8b6209f84961687d993b93ea0d397f5d5bf
 		p.Data = append(p.Data, Data...)
 		return p.OutChannel
 	}
@@ -98,7 +98,7 @@ func (D *IndexedElements) AddElements(Name string, Data []string) SafeReturn {
 		D.Front = e
 	}
 	D.End = e
-	D.NameIndex[e.Name] = e
+	D.NameIndex[string(e.Name)] = e
 	return e.OutChannel
 }
 
@@ -118,7 +118,7 @@ func (D *IndexedElements) RemoveElement(e *Element) {
 	}
 	e.Next = nil
 	e.Prev = nil
-	delete(D.NameIndex, e.Name)
+	delete(D.NameIndex, string(e.Name))
 }
 
 // Remove the front element
@@ -133,7 +133,7 @@ func (D *IndexedElements) Pop() *Element {
 	}
 	e.Next = nil
 	e.Prev = nil
-	delete(D.NameIndex, e.Name)
+	delete(D.NameIndex, string(e.Name))
 	return e
 }
 
@@ -195,13 +195,13 @@ func (D *IndexedPriorityElements) add(e *PriorityElement) {
 	}
 	// Add e to the indexes
 	D.PriorityMap[e.Priority] = e
-	D.NameIndex[e.Name] = e
+	D.NameIndex[string(e.Name)] = e
 }
 
 // Insert an element
-func (D *IndexedPriorityElements) AddElement(Name, Data string, Priority int) SafeReturn {
+func (D *IndexedPriorityElements) AddElement(Name []byte, Data string, Priority int) SafeReturn {
 	// If the element name is already in the queue we need to do special stuff
-	if p, ok := D.NameIndex[Name]; ok {
+	if p, ok := D.NameIndex[string(Name)]; ok {
 		// Append the data
 		p.Data = append(p.Data, Data)
 		// If the new priority is smaller, we need to remove the old element and insert it with the new priority
@@ -259,7 +259,7 @@ func (D *IndexedPriorityElements) RemoveElement(e *PriorityElement) {
 	// Clear the pointers of e
 	e.Next = nil
 	e.Prev = nil
-	delete(D.NameIndex, e.Name)
+	delete(D.NameIndex, string(e.Name))
 }
 
 // Remove the front element
@@ -282,6 +282,6 @@ func (D *IndexedPriorityElements) Pop() *PriorityElement {
 	e.Next = nil
 	e.Prev = nil
 	// Remove e
-	delete(D.NameIndex, e.Name)
+	delete(D.NameIndex, string(e.Name))
 	return e
 }
